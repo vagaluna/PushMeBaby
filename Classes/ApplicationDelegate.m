@@ -8,6 +8,8 @@
 
 #import "ApplicationDelegate.h"
 
+
+
 @interface ApplicationDelegate ()
 #pragma mark Properties
 @property(nonatomic, retain) NSString *deviceToken, *payload, *certificate;
@@ -102,6 +104,9 @@
     
 	// Create identity.
 	result = SecIdentityCreateWithCertificate(keychain, certificate, &identity);// NSLog(@"SecIdentityCreateWithCertificate(): %d", result);
+    if (result != noErr) {
+        NSLog(@"SecIdentityCreateWithCertificate - error %d", result);
+    }
 	
 	// Set client certificate.
 	CFArrayRef certificates = CFArrayCreate(NULL, (const void **)&identity, 1, NULL);
@@ -147,6 +152,14 @@
 	
 }
 
+- (uint8)char2Int:(char)c {
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else {
+        return 10 + c - 'a';
+    }
+}
+
 #pragma mark IBAction
 
 - (IBAction)push:(id)sender {
@@ -163,13 +176,22 @@
 	
 	// Convert string into device token data.
 	NSMutableData *deviceToken = [NSMutableData data];
-	unsigned value;
-	NSScanner *scanner = [NSScanner scannerWithString:self.deviceToken];
-	while(![scanner isAtEnd]) {
-		[scanner scanHexInt:&value];
-		value = htonl(value);
-		[deviceToken appendBytes:&value length:sizeof(value)];
-	}
+//	unsigned value;
+//	NSScanner *scanner = [NSScanner scannerWithString:self.deviceToken];
+//	while(![scanner isAtEnd]) {
+//		[scanner scanHexInt:&value];
+//		value = htonl(value);
+//		[deviceToken appendBytes:&value length:sizeof(value)];
+//	}
+    uint8 value;
+    for (int i = 0; i < _deviceToken.length; i = i + 2) {
+        char high = [_deviceToken characterAtIndex:i];
+        char low = [_deviceToken characterAtIndex:i + 1];
+        uint8 vh = [self char2Int:high];
+        uint8 vl = [self char2Int:low];
+        value = vh * 16 + vl;
+        [deviceToken appendBytes:&value length:sizeof(value)];
+    }
 	
 	// Create C input variables.
 	char *deviceTokenBinary = (char *)[deviceToken bytes];
